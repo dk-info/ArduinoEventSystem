@@ -28,8 +28,12 @@
 #ifndef EventQueue_h
 #define EventQueue_h
 
-#include <WProgram.h>
 #include <Events.h>
+#if defined(ARDUINO) && (ARDUINO >= 100)
+#include <Arduino.h>
+#else
+#include <WProgram.h>
+#endif
 
 class EventQueue {
 

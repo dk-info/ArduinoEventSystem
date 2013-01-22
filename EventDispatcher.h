@@ -35,9 +35,6 @@
 #define EventDispatcher_h
 
 
-
-#include <WProgram.h>
-
 #include <Events.h>
 
 #include <EventQueue.h>

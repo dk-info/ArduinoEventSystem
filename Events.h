@@ -27,9 +27,11 @@
 
 #ifndef Events_h
 #define Events_h
-
+#if defined(ARDUINO) && (ARDUINO >= 100)
+#include <Arduino.h>
+#else
 #include <WProgram.h>
-
+#endif
 // Some common events.
 // Codes 0..199 are available for
 // user defined events.

@@ -28,351 +28,253 @@
  *
  */
 
-
 #include "EventDispatcher.h"
-
-
-
-
 
 EventDispatcher::EventDispatcher(EventQueue* evQueue) {
 
-    q = evQueue;
+	q = evQueue;
 
-    numListeners = 0;
-
-}
-
-
-
-
-
-bool EventDispatcher::addEventListener(int ev_code, EventListener f, OverwriteOption overwrite) {
-
-    int k;
-
-    
-
-    // argument check
-
-    if (f == 0) {
-
-        return false;
-
-    }
-
-    
-
-    if (overwrite == OVERWRITE_EVENT) {
-
-        k = _searchEventCode(ev_code);
-
-        if (k >= 0) {           // event code found
-
-            callback[k] = f;    // replace function
-
-            enabled[k] = true;  // it's an add(), so enable the listener
-
-            return true;
-
-        }
-
-    }
-
-
-
-    // APPEND or (OVERWRITE and NOT FOUND)
-
-    
-
-    // dispatch table is full
-
-    if (numListeners == MAX_LISTENERS) {
-
-        return false;
-
-    }
-
-    
-
-    callback[numListeners] = f;
-
-    eventCode[numListeners] = ev_code;
-
-    enabled[numListeners] = true;
-
-    
-
-    numListeners++;
-
-    
-
-    return true;
+	numListeners = 0;
 
 }
 
+bool EventDispatcher::addEventListener(int ev_code, EventListener f,
+		OverwriteOption overwrite) {
 
+	int k;
 
+	// argument check
 
+	if (f == 0) {
+
+		return false;
+
+	}
+
+	if (overwrite == OVERWRITE_EVENT) {
+
+		k = _searchEventCode(ev_code);
+
+		if (k >= 0) {           // event code found
+
+			callback[k] = f;    // replace function
+
+			enabled[k] = true;  // it's an add(), so enable the listener
+
+			return true;
+
+		}
+
+	}
+
+	// APPEND or (OVERWRITE and NOT FOUND)
+
+	// dispatch table is full
+
+	if (numListeners == MAX_LISTENERS) {
+
+		return false;
+
+	}
+
+	callback[numListeners] = f;
+
+	eventCode[numListeners] = ev_code;
+
+	enabled[numListeners] = true;
+
+	numListeners++;
+
+	return true;
+
+}
 
 bool EventDispatcher::removeEventListener(int ev_code, EventListener f) {
 
-    int i;
+	int i;
 
-    int k;
+	int k;
 
-    
+	if (numListeners == 0) {
 
-    if (numListeners == 0) {
+		return false;
 
-        return false;
+	}
 
-    }
+	k = _searchEventListener(ev_code, f);
 
-    
+	if (k < 0) {
 
-    k = _searchEventListener(ev_code, f);
+		return false;
 
-    if (k < 0) {
+	}
 
-        return false;
+	for (i = k; i < numListeners - 1; i++) {
 
-    }
+		callback[i] = callback[i + 1];
 
-    
+		eventCode[i] = eventCode[i + 1];
 
-    for (i = k; i < numListeners - 1; i++) {
+		enabled[i] = enabled[i + 1];
 
-        callback[i] = callback[i + 1];
+	}
 
-        eventCode[i] = eventCode[i + 1];
+	numListeners--;
 
-        enabled[i] = enabled[i + 1];
-
-    }
-
-    
-
-    numListeners--;
-
-    
-
-    return true;
+	return true;
 
 }
 
+bool EventDispatcher::enableEventListener(int ev_code, EventListener f,
+		bool enable) {
 
+	int k;
 
+	if (numListeners == 0) {
 
+		return false;
 
-bool EventDispatcher::enableEventListener(int ev_code, EventListener f, bool enable) {
+	}
 
-    int k;
+	k = _searchEventListener(ev_code, f);
 
+	if (k < 0) {
 
+		return false;
 
-    if (numListeners == 0) {
+	}
 
-        return false;
+	enabled[k] = enable;
 
-    }
-
-    
-
-    k = _searchEventListener(ev_code, f);
-
-    if (k < 0) {
-
-        return false;
-
-    }
-
-    
-
-    enabled[k] = enable;
-
-    
-
-    return true;
+	return true;
 
 }
-
-
-
-
 
 bool EventDispatcher::isEventListenerEnabled(int ev_code, EventListener f) {
 
-    int k;
+	int k;
 
+	if (numListeners == 0) {
 
+		return false;
 
-    if (numListeners == 0) {
+	}
 
-        return false;
+	k = _searchEventListener(ev_code, f);
 
-    }
+	if (k < 0) {
 
-    
+		return false;
 
-    k = _searchEventListener(ev_code, f);
+	}
 
-    if (k < 0) {
-
-        return false;
-
-    }
-
-    
-
-    return enabled[k];
+	return enabled[k];
 
 }
-
-
-
-
-
-
 
 void EventDispatcher::run() {
 
-    int event;
+	int event;
 
-    int param;
+	int param;
 
-    int i;
+	int i;
 
-    bool handlerFound;
+	bool handlerFound;
 
-    
+	handlerFound = false;
 
-    handlerFound = false;
+	if (q->dequeueEvent(&event, &param)) {
 
+		for (i = 0; i < numListeners; i++) {
+			Serial.print("\nProcessing");
 
+			if ((callback[i] != 0) && (eventCode[i] == event) && enabled[i]) {
 
-    if (q->dequeueEvent(&event, &param)) {
+				handlerFound = true;
 
-        for (i = 0; i < numListeners; i++) {
+				(*callback[i])(event, param);
 
-            if ((callback[i] != 0) && (eventCode[i] == event) && enabled[i]) {
+			}
 
-                handlerFound = true;
+		}
 
-                (*callback[i])(event, param);
+		if (!handlerFound) {
+			Serial.print("\n ? No callback");
+			if ((defaultCallback != 0) && (defaultCallbackEnabled)) {
 
-            }
+				(*defaultCallback)(event, param);
 
-        }
+			}
 
-        
+		}
 
-        if (!handlerFound) {
-
-            if ((defaultCallback != 0) && (defaultCallbackEnabled)) {
-
-                (*defaultCallback)(event, param);
-
-            }
-
-        }
-
-    }
+	}
 
 }
-
-
-
-
 
 bool EventDispatcher::setDefaultListener(EventListener f) {
 
-    if (f == 0) {
+	if (f == 0) {
 
-        return false;
+		return false;
 
-    }
+	}
 
-    
+	defaultCallback = f;
 
-    defaultCallback = f;
+	defaultCallbackEnabled = true;
 
-    defaultCallbackEnabled = true;
-
-    return true;
+	return true;
 
 }
-
-
-
-
 
 void EventDispatcher::removeDefaultListener() {
 
-    defaultCallback = 0;
+	defaultCallback = 0;
 
-    defaultCallbackEnabled = false;
+	defaultCallbackEnabled = false;
 
 }
-
-
-
-
 
 void EventDispatcher::enableDefaultListener(bool enable) {
 
-    defaultCallbackEnabled = enable;
+	defaultCallbackEnabled = enable;
 
 }
-
-
-
-
 
 int EventDispatcher::_searchEventListener(int ev_code, EventListener f) {
 
-    int i;
+	int i;
 
-    
+	for (i = 0; i < numListeners; i++) {
 
-    for (i = 0; i < numListeners; i++) {
+		if ((eventCode[i] == ev_code) && (callback[i] == f)) {
 
-        if ((eventCode[i] == ev_code) && (callback[i] == f)) {
+			return i;
 
-            return i;
+		}
 
-        }
+	}
 
-    }
-
-    
-
-    return -1;
+	return -1;
 
 }
 
-
-
-
-
 int EventDispatcher::_searchEventCode(int ev_code) {
 
-    int i;
+	int i;
 
-    
+	for (i = 0; i < numListeners; i++) {
 
-    for (i = 0; i < numListeners; i++) {
+		if (eventCode[i] == ev_code) {
 
-        if (eventCode[i] == ev_code) {
+			return i;
 
-            return i;
+		}
 
-        }
+	}
 
-    }
-
-    
-
-    return -1;
+	return -1;
 
 }
