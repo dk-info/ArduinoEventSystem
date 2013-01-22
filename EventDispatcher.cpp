@@ -187,7 +187,6 @@ void EventDispatcher::run() {
 	if (q->dequeueEvent(&event, &param)) {
 
 		for (i = 0; i < numListeners; i++) {
-			Serial.print("\nProcessing");
 
 			if ((callback[i] != 0) && (eventCode[i] == event) && enabled[i]) {
 
@@ -200,7 +199,6 @@ void EventDispatcher::run() {
 		}
 
 		if (!handlerFound) {
-			Serial.print("\n ? No callback");
 			if ((defaultCallback != 0) && (defaultCallbackEnabled)) {
 
 				(*defaultCallback)(event, param);
